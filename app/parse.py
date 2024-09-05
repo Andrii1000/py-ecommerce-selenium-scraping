@@ -87,6 +87,24 @@ def fetch_products_with_load_more(url: str) -> List[Product]:
     return collected_products
 
 
+def detect_pagination(url: str) -> bool:
+    options = Options()
+    options.headless = True
+    service = ChromeService(executable_path="path/to/chromedriver")
+    driver = webdriver.Chrome(service=service, options=options)
+    driver.get(url)
+
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "ecomerce-items-scroll-more"))
+        )
+        return True
+    except Exception:
+        return False
+    finally:
+        driver.quit()
+
+
 def save_products_to_csv(products: List[Product], filename: str) -> None:
     with open(filename, mode="w", newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(
@@ -100,16 +118,16 @@ def save_products_to_csv(products: List[Product], filename: str) -> None:
 
 def get_all_products() -> None:
     category_config = {
-        "home": (URLS["home"], "home.csv", False),
-        "computers": (URLS["computers"], "computers.csv", False),
-        "laptops": (URLS["laptops"], "laptops.csv", True),
-        "tablets": (URLS["tablets"], "tablets.csv", True),
-        "phones": (URLS["phones"], "phones.csv", False),
-        "touch": (URLS["touch"], "touch.csv", True),
+        "home": (URLS["home"], "home.csv"),
+        "computers": (URLS["computers"], "computers.csv"),
+        "laptops": (URLS["laptops"], "laptops.csv"),
+        "tablets": (URLS["tablets"], "tablets.csv"),
+        "phones": (URLS["phones"], "phones.csv"),
+        "touch": (URLS["touch"], "touch.csv"),
     }
 
-    for category, (url, filename, use_more_button) in category_config.items():
-        if use_more_button:
+    for category, (url, filename) in category_config.items():
+        if detect_pagination(url):
             products = fetch_products_with_load_more(url)
         else:
             products = fetch_products_from_static_page(url)
